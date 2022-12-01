@@ -2,15 +2,43 @@
 #include <Wire.h>
 #include <MFRC522.h>
 #include <SPI.h>
-#include <AHT10.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WiFiAP.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#include <esp_now.h>
 #define RFID_SS_SDA   21
 #define RFID_RST      14
 #define led_vermelho  2
 #define led_verde     15
 #define buzzer        40
+
+//Pino utilizado para leitura
+//e que será enviado o valor
+#define PIN 3
+
+//Canal usado para conexão
+#define CHANNEL 1
+
+//Se MASTER estiver definido 
+//o compilador irá compilar o Master.ino
+//Se quiser compilar o Slave.ino remova ou
+//comente a linha abaixo
+#define MASTER
+
+//Estrutura com informações
+//sobre o próximo peer
+esp_now_peer_info_t peer;
+
+
+const char *ssid = "ESP T4G1";
+const char *password = "Turma4Grupo1";
+WebServer server(80);
+
 int iniciar = 0;
 
-AHT10Class AHT10;
+//AHT10Class AHT10;
 
 MFRC522 rfidBase = MFRC522(RFID_SS_SDA, RFID_RST);
 class LeitorRFID{
@@ -22,7 +50,7 @@ class LeitorRFID{
     int cartaoDetectado = 0;
     int cartaoJaLido = 0;
     // Leitura e Regulagem de tempo de operação (sla o que isso significa ???????)
-    void processaCodigoLido(){
+    void processaCodigoLido(){  
       char codigo[3*rfid->uid.size+1];
       codigo[0] = 0;
       char temp[10];
@@ -129,6 +157,7 @@ class LeitorRFID{
     };
 };
 LeitorRFID *leitor = NULL;
+
 //////////////////////////////
 void setup() {
 
@@ -154,13 +183,106 @@ void setup() {
   // Serial.print("MISO: "); Serial.println(MISO);
   // Serial.print("SCK: "); Serial.println(SCK);
   // Serial.print("SS: "); Serial.println(SS);
+  WiFi.softAP(ssid, password);
+  IPAddress ESP_IP = WiFi.softAPIP();
+  Serial.print("Wi-Fi: ");
+  Serial.println(ssid);
+  Serial.print("IP: ");
+  Serial.println(ESP_IP);
+  server.begin();
+  Serial.println("Servidor Iniciado.");
+  if (MDNS.begin("esp32")) {
+    Serial.println("MDNS responder started");
+  }
+  server.on("/", handleRoot);
+  server.on("/on", handleOn);
+  server.on("/off", handleOff);
+  server.onNotFound(handleNotFound);
+  server.begin();
+  Serial.println("HTTP server started");
 }
 
-void loop() {
-  Serial.println(String("") + "Humidity(%RH):\t\t" + AHT10.GetHumidity() + "%");
-  Serial.println(String("") + "Temperature(℃):\t" + AHT10.GetTemperat xure() + "℃");
+void handleRoot(){
+  String html = "";
+  html += "<meta charset='UTF-8'>";
+  html += "<h1>CONEXÃO???</h1>";
+  html += "Clique <a href=\"/on\">aqui</a> para ligar o LED. <br><br><br>";
+  html += "Clique <a href=\"/off\">aqui</a> para desligar o LED. <br><br><br>";
+  html += "<h3>Autores: T4G1</h3>";
+  server.send(200, "text/html", html);
+}
+  
+void handleOn(){
+  digitalWrite(led_vermelho, HIGH);
+  handleRoot();
+}
 
-  delay(1000);
+void handleOff(){
+  digitalWrite(led_vermelho, LOW);
+  handleRoot();
+}
+
+void handleNotFound() {
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++){
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n"; 
+  }
+  server.send(404, "text/plain", message);
+}
+
+//######################ESP-NOW############################
+
+//Função para inicializar o modo station
+void modeStation(){
+    //Colocamos o ESP em modo station
+    WiFi.mode(WIFI_STA);
+    //Mostramos no Monitor Serial o Mac Address 
+    //deste ESP quando em modo station
+    Serial.print("Mac Address in Station: "); 
+    Serial.println(WiFi.macAddress());
+}
+
+//Função de inicialização do ESPNow
+void InitESPNow() {
+    //Se a inicialização foi bem sucedida
+    if (esp_now_init() == ESP_OK) {
+        Serial.println("ESPNow Init Success");
+    }
+    //Se houve erro na inicialização
+    else {
+        Serial.println("ESPNow Init Failed");
+        ESP.restart();
+    }
+}
+
+//Função que adiciona um novo peer
+//através de seu endereço MAC
+void addPeer(uint8_t *peerMacAddress){
+    //Informamos o canal
+    peer.channel = CHANNEL;
+    //0 para não usar criptografia ou 1 para usar
+    peer.encrypt = 0;
+    //Copia o endereço do array para a estrutura
+    memcpy(peer.peer_addr, peerMacAddress, 6);
+    //Adiciona o slave
+    esp_now_add_peer(&peer);
+}
+
+//#########################################################
+
+void loop() {
+  //Serial.println(String("") + "Humidity(%RH):\t\t" + AHT10.GetHumidity() + "%");
+  //Serial.println(String("") + "Temperature(℃):\t" + AHT10.GetTemperat xure() + "℃");
+  server.handleClient();
+  delay(2);
+  //delay(1000);
 
   // Enquanto não for detectado nada, ele vai ficar procurando um cartão até achar um. Ai ele começa a acessar as funções
   // Serial.println("Lendo Cartao:");
