@@ -41,7 +41,7 @@ void onFtmReport(arduino_event_t *event) {
   }
   // Sinal que o reporte recebe
   xSemaphoreGive(ftmSemaphore);
-}
+} 
 
 // Inicia uma Sessão FTM e espera pelo reporte FTM
 bool getFtmReport(){
