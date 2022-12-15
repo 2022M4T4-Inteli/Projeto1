@@ -1,2 +1,7 @@
 # Projeto1
-Projeto 1
+
+# Integrantes
+* Allan Casado
+* Jonas Sales
+* Matheus Fidelis
+
