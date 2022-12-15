@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+
+<html>
+  <head >
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <!-- <link rel="stylesheet" href="toten.css" /> -->
+    <!-- <link href="script.js" />     -->
+    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script> -->
+    <title>Toten Estapar</title>
+    <script>
+      let display = document.getElementsByClassName('tempo');
+
+      let url = "http://localhost:3000/pessoa";
+
+      function TableUpdate() {
+
+          fetch(url).then(async(data)=>{
+              let result = await data.json()
+
+              console.log(result)
+
+              let distanciaHTML = 'Entrega estimada: <br><br>'
+              let rfidHTML = 'Identificação: <br><br>'
+
+              for(let i = 0; i < result.length; i++) {
+                let distancia = result[i].distancia
+                let RFID = result[i].RFID
+
+                rfidHTML += `<br> ${RFID} <br>`
+                distanciaHTML += `<br> ${distancia.toFixed(2)} minutos <br>`
+              }
+
+              document.querySelector(".rfid").innerHTML = rfidHTML
+              document.querySelector(".tempoEstimado").innerHTML = distanciaHTML
+
+          })
+
+      }
+    </script>
+    <style>
+
+    html, body {
+      height: 100%;
+      font-family: 'Courier New';
+      text-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+      
+    }
+    
+    .filaDeEspera{
+      text-align: center;
+      position: fixed;
+      top: 10%;
+      color: #000000;
+      width: 100%;
+      font-size: 45px;
+    }
+
+    .tempoEstimado{
+      bottom: 0;
+      right: 0;
+      width: 60%;
+      height: 60%;
+      position: fixed;
+      text-align: center;
+      font-size: 25px;
+      
+
+    }
+
+    .rfid{
+      bottom: 0;
+      left: 0;
+      width: 60%;
+      height: 60%;
+      position: fixed;
+      text-align: center;
+      font-size: 25px;
+      
+      
+    }
+
+    
+    </style>
+  </head>
+  <body onload="TableUpdate()"> <!-- quando carregar a página ja executa a fução que da o console.log() -->
+    
+    <h1 class="filaDeEspera">FILA DE ESPERA:</h1>
+
+    <div class="rfid"></div> 
+    <br>
+    <div class="tempoEstimado"></div>
+    <br>
+    
+
+  </body>
+</html>
